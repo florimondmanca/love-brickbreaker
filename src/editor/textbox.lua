@@ -2,10 +2,10 @@ local w, h = love.graphics.getDimensions()
 
 -- textbox for text input
 local textBox = {
-    x = w/2 - 100,
-    y = h/2 - 20,
-    width = 200,
-    height = 40,
+    x = 0,
+    y = h - 50,
+    width = w,
+    height = 50,
     rawText = '',
     text = love.graphics.newText(love.graphics.getFont()),
     active = false,
@@ -29,8 +29,10 @@ function textBox:mousepressed(x, y, button)
         and y >= self.y
         and y <= self.y + self.height then
             self.active = true
+            print('textbox:active')
         elseif self.active then
             self.active = false
+            print('textbox:inactive')
         end
     end
 end

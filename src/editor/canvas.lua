@@ -1,31 +1,34 @@
 local lume = require 'lib.lume'
 local settings = require 'settings'
 
-local canvas = {}
 
-local player = {
-    x = 0, y = 0, w = 0, h = 0,
-    color = settings.playerColor
+local w, h = love.graphics.getDimensions()
+
+local canvas = {
+    x = 0,
+    y = 0,
+    w = w,
+    h = h - 50,
+    colors = {
+        background = {60, 60, 60}
+    },
+    active = true,
+    current = nil,
+    spanBegin = nil,
+    spanning = false,
+    bricks = {},
 }
-local bricks = {}
-
--- if span mode is activated (true), a span of bricks will be drawn on screen
-local spanMode = false
-local spanBegin
-
--- the brick being drawn
-local drawing
 
 function canvas:newDrawing(x, y)
-    drawing = {
+    self.drawing = {
         x = x or 0, y = y or 0, w = settings.brickWidth, h = settings.brickHeight,
         color = settings.brickColor,
     }
 end
 
 function canvas:saveDrawing()
-    lume.push(bricks, drawing)
-    print('new_brick: (' .. drawing.x .. ', ' .. drawing.y .. ')')
+    lume.push(self.bricks, self.drawing)
+    print('new_brick: (' .. self.drawing.x .. ', ' .. self.drawing.y .. ')')
 end
 
 local function snapToGrid(x, y) return
@@ -70,7 +73,8 @@ local function getSpanBricks(xd, yd, xb, yb)
 end
 
 function canvas:export()
-    local success = love.filesystem.write('level.txt', lume.serialize(bricks))
+    if not self.active then return end
+    local success = love.filesystem.write('level.txt', lume.serialize(self.bricks))
     if success then
         print('export:success')
     else
@@ -84,22 +88,21 @@ function canvas:load()
 end
 
 function canvas:draw()
-    -- player bar
-    love.graphics.setColor(unpack(player.color))
-    drawRectangle(player)
-
+    love.graphics.setColor(unpack(self.colors.background))
+    drawRectangle(self)
     -- existing bricks
-    for _, brick in ipairs(bricks) do
+    for _, brick in ipairs(self.bricks) do
         love.graphics.setColor(unpack(brick.color))
         drawRectangle(brick)
     end
 
     -- brick(s) being drawn
     love.graphics.setColor(255, 255, 255, 128)
-    drawRectangle(drawing)
-    if spanMode then
-        if spanBegin then
-            for _, spanBrick in ipairs(getSpanBricks(drawing.x, drawing.y, spanBegin.x, spanBegin.y)) do
+    drawRectangle(self.drawing)
+    if self.spanning then
+        if self.spanBegin then
+            for _, spanBrick in ipairs(
+            getSpanBricks(self.drawing.x, self.drawing.y, self.spanBegin.x, self.spanBegin.y)) do
                 drawRectangle(spanBrick)
             end
         end
@@ -107,38 +110,55 @@ function canvas:draw()
 end
 
 function canvas:mousemoved(x, y)
-    drawing.x, drawing.y = snapToGrid(x, y)
+    self.drawing.x, self.drawing.y = snapToGrid(x, y)
+    self.drawing.x = lume.clamp(self.drawing.x, self.x, self.x + self.w - self.drawing.w)
+    self.drawing.y = lume.clamp(self.drawing.y, self.y, self.y + self.h - self.drawing.h)
 end
 
 function canvas:keypressed(key)
     if key == 'rshift' or key == 'lshift' then
-        spanMode = true
+        self.spanning = true
         print('span_mode:on')
     end
 end
 
 function canvas:keyreleased(key)
     if key == 'rshift' or key == 'lshift' then
-        spanMode = false
-        spanBegin = nil
+        self.spanning = false
+        self.spanBegin = nil
         print('span_mode:off')
     end
     if key == 'return' then self:export() end
 end
 
-function canvas:mousereleased(_, _, button)
+function canvas:mousepressed(x, y, button)
     if button == 1 then
-        local xd, yd = drawing.x, drawing.y
-        if spanMode then
-            if spanBegin then
-                for _, spanBrick in ipairs(getSpanBricks(xd, yd, spanBegin.x, spanBegin.y)) do
+        if x >= self.x
+        and x <= self.x + self.w
+        and y >= self.y
+        and y <= self.y + self.h then
+            self.active = true
+            print 'canvas:active'
+        elseif self.active then
+            self.active = false
+            print 'canvas:inactive'
+        end
+    end
+end
+
+function canvas:mousereleased(_, _, button)
+    if button == 1 and self.active then
+        local xd, yd = self.drawing.x, self.drawing.y
+        if self.spanning then
+            if self.spanBegin then
+                for _, spanBrick in ipairs(getSpanBricks(xd, yd, self.spanBegin.x, self.spanBegin.y)) do
                     self:newDrawing(spanBrick.x, spanBrick.y)
                     self:saveDrawing()
                 end
                 self:newDrawing(xd, yd)
-                spanBegin = nil
+                self.spanBegin = nil
             else
-                spanBegin = lume.clone(drawing)
+                self.spanBegin = lume.clone(self.drawing)
                 self:saveDrawing()
                 self:newDrawing(xd, yd)
             end
