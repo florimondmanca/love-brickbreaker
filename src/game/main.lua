@@ -1,9 +1,8 @@
 -- main.lua
 
-local class = require 'lib.class'
 local lume = require 'lib.lume'
-local actions = require 'actions'
-local asserts = require 'lib.asserts'
+local objectsP = require 'objects'
+local utils = require 'lib.utils'
 
 
 local colors = {
@@ -17,43 +16,10 @@ local colors = {
 
 love.graphics.setBackgroundColor(colors.background)
 
--- constants
-local w, h = love.graphics.getDimensions()
-
----------------
--- Utilities --
----------------
-
-
--------------
--- Objects --
--------------
-
-local function Player()
-    local player = {
-        x = w/2,
-        y = h-40,
-        width = 100,
-        height = 20
-    }
-
-    function player:update(dt)
-        -- move with keyboard
-        if love.keyboard.isDown('left') then self.x = self.x - 10 end
-        if love.keyboard.isDown('right') then self.x = self.x + 10 end
-    end
-
-    function player:draw()
-        love.graphics.setColor(255, 255, 255)
-        love.graphics.rectangle('fill', self.x, self.y, self.width, self.height)
-    end
-
-    return player
-end
-
 ---------------
 -- Main loop --
 ---------------
+
 
 local objects = {}
 local player
@@ -66,8 +32,11 @@ local function forEachObject(fname, ...)
 end
 
 function love.load()
-    player = Player()
+    player = objectsP.Player()
     lume.push(objects, player)
+    for _, coords in ipairs(utils.makeBarGrid(10, 3, 40, 20)) do
+        lume.push(objects, objectsP.Brick(coords.x, coords.y, coords.width, coords.height))
+    end
 end
 
 function love.update(dt)
