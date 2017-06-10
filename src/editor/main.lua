@@ -85,9 +85,6 @@ function love.load()
     newDrawing()
 end
 
-function love.update(dt)
-end
-
 function love.draw()
     -- player bar
     love.graphics.setColor(unpack(player.color))
@@ -115,14 +112,12 @@ function love.draw()
     drawRectangle(toolbar)
 end
 
-function love.mousemoved(x, y, dx, dy)
+function love.mousemoved(x, y)
     drawing.x, drawing.y = snapToGrid(x, y)
 end
 
-
 function love.keyreleased(key)
     if key == 'rshift' or key == 'lshift' then spanMode = false end
-
     if key == 'return' then export() end
 end
 
