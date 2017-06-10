@@ -3,8 +3,14 @@ local settings = require 'settings'
 
 love.graphics.setBackgroundColor(200, 200, 200)
 
+
 -- constants
 local w, h = love.graphics.getDimensions()
+
+
+---------------
+-- Variables --
+---------------
 
 local player = {
     x = 0, y = 0, w = 0, h = 0,
@@ -16,9 +22,49 @@ local toolbar = {
     y = h - 30, h = 30
 }
 
+-- if span mode is activated (true), a span of bricks will be drawn on screen
 local spanMode = false
 local spanBegin
 
+-- the brick being drawn
+local drawing
+
+-- toast for small message printing
+local singleToast = {
+    x = w/2,
+    y = 50,
+    text = love.graphics.newText(love.graphics.getFont(), ''),
+    color = {100, 150, 100},
+    duration = 2,  -- seconds
+    time = 0,
+    alive = false,
+}
+
+function singleToast:awake() self.alive = true end
+
+function singleToast:setText(text)
+    self.text:set(text)
+end
+
+function singleToast:update(dt)
+    if not self.alive then return end
+    self.time = self.time + dt
+    if self.time > self.duration then
+        self.time = 0
+        self.alive = false
+    end
+end
+
+function singleToast:draw()
+    if not self.alive then return end
+    love.graphics.setColor(self.color)
+    love.graphics.draw(self.text, self.x - self.text:getWidth()/2, self.y)
+end
+
+
+---------------------------
+-- Functions definitions --
+---------------------------
 
 local function snapToGrid(x, y) return
     math.floor(x / settings.brickWidth) * settings.brickWidth,
@@ -30,9 +76,6 @@ local function gridCoords(x, y) return
     math.floor(y / settings.brickHeight)
 end
 
--- the brick being drawn
-local drawing
-
 local function newDrawing(x, y)
     drawing = {
         x = x or 0, y = y or 0, w = settings.brickWidth, h = settings.brickHeight,
@@ -41,8 +84,8 @@ local function newDrawing(x, y)
 end
 
 local function saveDrawing()
-    print('saving brick at', drawing.x, drawing.y)
     lume.push(bricks, drawing)
+    print('new_brick: (' .. drawing.x .. ', ' .. drawing.y .. ')')
 end
 
 local function drawRectangle(rect)
@@ -76,13 +119,34 @@ local function getSpanBricks(xd, yd, xb, yb)
     return spanBricks
 end
 
+--- makes a new toast pop on the screen
+local function newToast(msg, duration)
+    if duration then singleToast.duration = duration end
+    singleToast:setText(msg)
+    singleToast:awake()
+end
+
 local function export()
     local success = love.filesystem.write('level.txt', lume.serialize(bricks))
-    print('export:' .. (success and 'success' or 'fail'))
+    if success then
+        print('export:success')
+        newToast('Exported level')
+    else
+        print('export:fail')
+    end
 end
+
+
+----------------------
+-- Love2D callbacks --
+----------------------
 
 function love.load()
     newDrawing()
+end
+
+function love.update(dt)
+    singleToast:update(dt)
 end
 
 function love.draw()
@@ -110,20 +174,32 @@ function love.draw()
     -- toolbar
     love.graphics.setColor(170, 170, 170)
     drawRectangle(toolbar)
+
+    singleToast:draw()
 end
 
 function love.mousemoved(x, y)
     drawing.x, drawing.y = snapToGrid(x, y)
 end
 
+function love.keypressed(key)
+    if key == 'rshift' or key == 'lshift' then
+        spanMode = true
+        print('span_mode:on')
+    end
+end
+
 function love.keyreleased(key)
-    if key == 'rshift' or key == 'lshift' then spanMode = false end
+    if key == 'rshift' or key == 'lshift' then
+        spanMode = false
+        spanBegin = nil
+        print('span_mode:off')
+    end
     if key == 'return' then export() end
 end
 
-function love.mousereleased(x, y, button)
+function love.mousereleased(_, _, button)
     if button == 1 then
-        spanMode = love.keyboard.isDown('rshift', 'lshift')
         local xd, yd = drawing.x, drawing.y
         if spanMode then
             if spanBegin then
