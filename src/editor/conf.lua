@@ -1,4 +1,5 @@
 function love.conf(t)
-    t.window.width = 1000
-    t.window.height = 750
+    t.window.width = 800
+    t.window.height = 600
+    t.window.title = "Brick Breaker • Editor"
 end

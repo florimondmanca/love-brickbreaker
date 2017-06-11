@@ -10,7 +10,7 @@ local canvas = {
     w = w,
     h = h - 50,
     colors = {
-        background = {60, 60, 60}
+        background = settings.colors.canvasBackground
     },
     active = true,
     current = nil,
@@ -21,8 +21,10 @@ local canvas = {
 
 function canvas:newDrawing(x, y)
     self.drawing = {
-        x = x or 0, y = y or 0, w = settings.brickWidth, h = settings.brickHeight,
-        color = settings.brickColor,
+        x = x or 0, y = y or 0,
+        w = settings.brickDims.w,
+        h = settings.brickDims.h,
+        color = settings.colors.brick,
     }
 end
 
@@ -32,17 +34,21 @@ function canvas:saveDrawing()
 end
 
 local function snapToGrid(x, y) return
-    math.floor(x / settings.brickWidth) * settings.brickWidth,
-    math.floor(y / settings.brickHeight) * settings.brickHeight
+    math.floor(x / settings.brickDims.w) * settings.brickDims.w,
+    math.floor(y / settings.brickDims.h) * settings.brickDims.h
 end
 
 local function gridCoords(x, y) return
-    math.floor(x / settings.brickWidth),
-    math.floor(y / settings.brickHeight)
+    math.floor(x / settings.brickDims.w),
+    math.floor(y / settings.brickDims.h)
 end
 
-local function drawRectangle(rect)
+local function drawRectangle(rect, contour)
     love.graphics.rectangle('fill', rect.x, rect.y, rect.w, rect.h)
+    if contour then
+        love.graphics.setColor(0, 0, 0)
+        love.graphics.rectangle('line', rect.x, rect.y, rect.w, rect.h)
+    end
 end
 
 local function getSpanBricks(xd, yd, xb, yb)
@@ -60,10 +66,10 @@ local function getSpanBricks(xd, yd, xb, yb)
         for j = ygi, ygf do
             if i ~= beginXg or j ~= beginYg then
                 lume.push(spanBricks, {
-                    x = i * settings.brickWidth,
-                    y = j * settings.brickHeight,
-                    w = settings.brickWidth,
-                    h = settings.brickHeight
+                    x = i * settings.brickDims.w,
+                    y = j * settings.brickDims.h,
+                    w = settings.brickDims.w,
+                    h = settings.brickDims.h
                 })
             end
         end
@@ -72,16 +78,17 @@ local function getSpanBricks(xd, yd, xb, yb)
     return spanBricks
 end
 
-function canvas:export()
+function canvas:export(filename)
     if not self.active then return end
-    local success = love.filesystem.write('level.txt', lume.serialize(self.bricks))
-    if success then
-        print('export:success')
-    else
-        print('export:fail')
-    end
+    local success = love.filesystem.write(filename, lume.serialize(self.bricks))
+    if success then print('export:' .. filename .. ':success')
+    else print('export:' .. filename .. ':fail') end
 end
 
+
+----------------------
+-- Love2d callbacks --
+----------------------
 
 function canvas:load()
     self:newDrawing()
@@ -93,7 +100,7 @@ function canvas:draw()
     -- existing bricks
     for _, brick in ipairs(self.bricks) do
         love.graphics.setColor(unpack(brick.color))
-        drawRectangle(brick)
+        drawRectangle(brick, true)
     end
 
     -- brick(s) being drawn

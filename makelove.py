@@ -10,8 +10,9 @@ if __name__ == '__main__':
     from subprocess import run
 
     shell = os.getenv('SHELL')
+    titles = {'editor': 'BrickBreakerEditor', 'game': 'BrickBreaker'}
     kind = len(sys.argv) >= 2 and sys.argv[1] or 'game'
 
     run([shell, '-i', '-c',
-         """cd src/{kind}; zip -r ../../{kind}.love *; cd ../..;
-         love {kind}.love""".format(kind=kind)])
+         """cd src/{kind}; zip -r ../../{title}.love *; cd ../..;
+         love {title}.love""".format(kind=kind, title=titles[kind])])
