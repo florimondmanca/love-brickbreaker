@@ -1,22 +1,28 @@
+local lume = require 'lib.lume'
+
 local Entity = require 'core.Entity'
+
+local particleImage = love.graphics.newImage('assets/img/particle_circle.png')
 
 local Ball = Entity:extend()
 
 local init = Ball.init
 function Ball:init(t)
     init(self, t)
-    assert(type(t.radius) == 'number', 'Ball requires radius')
-    assert(type(t.x) == 'number', 'Ball requires x')
-    assert(type(t.y) == 'number', 'Ball requires y')
-    assert(type(t.speed) == 'number', 'Ball requires speed')
-    assert(type(t.angle) == 'number', 'Ball requires angle')
-    assert(type(t.color) == 'table', 'Ball requires color')
+    assert(type(t.radius) == 'number', 'Ball requires number radius')
+    assert(type(t.x) == 'number', 'Ball requires number x')
+    assert(type(t.y) == 'number', 'Ball requires number y')
+    assert(type(t.speed) == 'number', 'Ball requires number speed')
+    assert(type(t.angle) == 'number', 'Ball requires number angle')
+    assert(type(t.color) == 'table', 'Ball requires table color')
+    assert(type(t.particleColor) == 'table', 'Ball requires table particleColor')
     self.x = t.x
     self.y = t.y
     self.vx = t.speed * math.cos(t.angle)
     self.vy = t.speed * math.sin(t.angle)
     self.radius = t.radius
     self.color = t.color
+    self.particleColor = t.particleColor
     self:set{
         speed = {
             value = t.speed,
@@ -41,14 +47,30 @@ function Ball:init(t)
             end,
         }
     }
+    self.ps = love.graphics.newParticleSystem(particleImage, 10)
+    self.ps:setParticleLifetime(.2, .7)
+    self.ps:setEmissionRate(20)
+    self.ps:setSpeed(40)
+    self.ps:setSpread(2*math.pi)
+    self.ps:setTangentialAcceleration(-400, 400)
+    self.ps:setSizes(.3, .2, 0)
+    self.ps:setSizeVariation(.1)
+    self.ps:setColors(
+        self.color,
+        self.particleColor
+    )
 end
 
 function Ball:update(dt)
     self.x = self.x + self.vx * dt
     self.y = self.y + self.vy * dt
+    self.ps:setPosition(self.x, self.y)
+    self.ps:update(dt)
 end
 
 function Ball:draw()
+    love.graphics.setColor(255, 255, 255, 255)
+    love.graphics.draw(self.ps)
     love.graphics.setColor(self.color)
     love.graphics.circle('fill', self.x, self.y, self.radius, 20)
 end

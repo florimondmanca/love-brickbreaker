@@ -8,6 +8,15 @@ local SceneBuilder = require 'core.SceneBuilder'
 
 local w, h = love.graphics.getDimensions()
 
+local COLORS = {
+    background = {lume.color('#594F3D', 255)},
+    borders = {lume.color('#DBB36D', 255)},
+    bricks = {lume.color('#DBB36D', 255)},
+    player = {lume.color('#DBB36D', 255)},
+    ball = {lume.color('#DBB36D', 255)},
+    ballParticles = {lume.color('#F2EFEA', 255)},
+}
+
 local function makegrid(t)
     assert(type(t.width) == 'number', 'grid() requires number width')
     assert(type(t.height) == 'number', 'grid() requires number height')
@@ -36,17 +45,18 @@ end
 local S = SceneBuilder()
 
 S:addGroup('borders', {init = function(group)
+    local c = COLORS.borders
     group:add(Border{
-        x = 0, y = 0, width = w, height = 10, color = {255, 255, 255}
+        x = 0, y = 0, width = w, height = 10, color = c
     })
     group:add(Border{
-        x = w - 10, y = 10, width = 10, height = h-10, color = {255, 255, 255}
+        x = w - 10, y = 10, width = 10, height = h-10, color = c
     })
     group:add(Border{
-        x = 0, y = 10, width = 10, height = h-10, color = {255, 255, 255}
+        x = 0, y = 10, width = 10, height = h-10, color = c
     })
     group:add(Border{
-        x = 10, y = h - 10, width = w-20, height = 10, color = {255, 255, 255}
+        x = 10, y = h - 10, width = w-20, height = 10, color = c
     })
 end})
 
@@ -59,7 +69,7 @@ S:addGroup('bricks', {init = function(group)
         group:add(Brick{
             x = brick.x, y = brick.y,
             width = brick.width, height = brick.height,
-            color = {255, 255, 255, 255},
+            color = COLORS.bricks,
         })
     end
 end})
@@ -72,19 +82,20 @@ S:addObjectAs('player', {
         minx = 10, maxx = w - 10,
         width = 100,
         height = 15,
-        color = {255, 255, 255, 255},
+        color = COLORS.player,
         controls = 'mouse',
     }
 })
 
-S:addGroup('balls', {init = function(group, scene)
+S:addGroup('balls', {z = -1, init = function(group, scene)
     group:add(Ball{
         x = scene.objects.player.x,
         y = scene.objects.player.y - 20,
         speed = 300,
-        angle = -math.pi/2 + math.pi/4 * lume.random(-.2, .2),
+        angle = -math.pi/2 + math.pi/4 * lume.random(-1, 1),
         radius = 6,
-        color = {255, 255, 100}
+        color = COLORS.ball,
+        particleColor = COLORS.ballParticles,
     })
 end})
 
@@ -109,6 +120,7 @@ S:onCollisionBetween{
             scene.objects.timer:tween(.2, brick, {scale=0}, 'in-quad',
             function() brick:kill() end)
         end)
+        scene.objects.timer:tween(.3, brick, {rotation=lume.random(-.1, .1) * math.pi}, 'in-quad')
     end,
     collider = collisions.rectangleToCircle,
 }
@@ -132,12 +144,16 @@ S:onCollisionBetween{
 S:onCollisionBetween{
     groupA = 'borders',
     groupB = 'balls',
-    resolve = function(border, ball)
+    resolve = function(border, ball, scene)
         local res = collisions.resolveRectangleToMovingCircle(border, ball)
         ball.x = res.x
         ball.y = res.y
         ball.vx = res.vx
         ball.vy = res.vy
+        scene.objects.timer:tween(.08, border, {scale = 1.5}, 'out-quad',
+        function()
+            scene.objects.timer:tween(.14, border, {scale = 1}, 'out-quad')
+        end)
     end,
     collider = collisions.rectangleToCircle,
 }
@@ -149,7 +165,7 @@ S:addUpdateAction(function(scene)
 end)
 
 S:addCallback('enter', function()
-    love.graphics.setBackgroundColor(255, 100, 150, 255)
+    love.graphics.setBackgroundColor(unpack(COLORS.background))
 end)
 
 return S
