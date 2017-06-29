@@ -1,170 +1,103 @@
-local middleclass = {
-  _VERSION     = 'middleclass v4.1.0',
-  _DESCRIPTION = 'Object Orientation for Lua',
-  _URL         = 'https://github.com/kikito/middleclass',
-  _LICENSE     = [[
-    MIT LICENSE
+local Class = {}
 
-    Copyright (c) 2011 Enrique García Cota
+-- default (empty) constructor
+function Class:init() end
 
-    Permission is hereby granted, free of charge, to any person obtaining a
-    copy of this software and associated documentation files (the
-    "Software"), to deal in the Software without restriction, including
-    without limitation the rights to use, copy, modify, merge, publish,
-    distribute, sublicense, and/or sell copies of the Software, and to
-    permit persons to whom the Software is furnished to do so, subject to
-    the following conditions:
+-- create a subclass
+function Class:extend(obj)
+	obj = obj or {}
 
-    The above copyright notice and this permission notice shall be included
-    in all copies or substantial portions of the Software.
+	local function copyTable(table, destination)
+		table = table or {}
+		local result = destination or {}
 
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-    OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-    CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-  ]]
-}
+		for k, v in pairs(table) do
+			if not result[k] then
+				if type(v) == "table" and k ~= "__index" and k ~= "__newindex" then
+					result[k] = copyTable(v)
+				else
+					result[k] = v
+				end
+			end
+		end
 
-local function _createIndexWrapper(aClass, f)
-  if f == nil then
-    return aClass.__instanceDict
-  else
-    return function(self, name)
-      local value = aClass.__instanceDict[name]
+		return result
+	end
 
-      if value ~= nil then
-        return value
-      elseif type(f) == "function" then
-        return (f(self, name))
-      else
-        return f[name]
-      end
-    end
-  end
+	copyTable(self, obj)
+
+	obj._ = obj._ or {}
+
+	local mt = {}
+
+	-- create new objects directly, like o = Object()
+	mt.__call = function(self, ...)
+		return self:new(...)
+	end
+
+	-- allow for getters and setters
+	mt.__index = function(table, key)
+		local val = rawget(table._, key)
+		if val and type(val) == "table" and (val.get ~= nil or val.value ~= nil) then
+			if val.get then
+				if type(val.get) == "function" then
+					return val.get(table, val.value)
+				else
+					return val.get
+				end
+			elseif val.value then
+				return val.value
+			end
+		else
+			return val
+		end
+	end
+
+	mt.__newindex = function(table, key, value)
+		local val = rawget(table._, key)
+		if val and type(val) == "table" and ((val.set ~= nil and val._ == nil) or val.value ~= nil) then
+			local v = value
+			if val.set then
+				if type(val.set) == "function" then
+					v = val.set(table, value, val.value)
+				else
+					v = val.set
+				end
+			end
+			val.value = v
+			if val and val.afterSet then val.afterSet(table, v) end
+		else
+			table._[key] = value
+		end
+	end
+
+	setmetatable(obj, mt)
+
+	return obj
 end
 
-local function _propagateInstanceMethod(aClass, name, f)
-  f = name == "__index" and _createIndexWrapper(aClass, f) or f
-  aClass.__instanceDict[name] = f
-
-  for subclass in pairs(aClass.subclasses) do
-    if rawget(subclass.__declaredMethods, name) == nil then
-      _propagateInstanceMethod(subclass, name, f)
-    end
-  end
+-- set properties outside the constructor or other functions
+function Class:set(prop, value)
+	if not value and type(prop) == "table" then
+		for k, v in pairs(prop) do
+			rawset(self._, k, v)
+		end
+	else
+		rawset(self._, prop, value)
+	end
 end
 
-local function _declareInstanceMethod(aClass, name, f)
-  aClass.__declaredMethods[name] = f
-
-  if f == nil and aClass.super then
-    f = aClass.super.__instanceDict[name]
-  end
-
-  _propagateInstanceMethod(aClass, name, f)
+-- create an instance of an object with constructor parameters
+function Class:new(...)
+	local obj = self:extend({})
+	if obj.init then obj:init(...) end
+	return obj
 end
 
-local function _tostring(self) return "class " .. self.name end
-local function _call(self, ...) return self:new(...) end
 
-local function _createClass(name, super)
-  local dict = {}
-  dict.__index = dict
-
-  local aClass = { name = name, super = super, static = {},
-                   __instanceDict = dict, __declaredMethods = {},
-                   subclasses = setmetatable({}, {__mode='k'})  }
-
-  if super then
-    setmetatable(aClass.static, { __index = function(_,k) return rawget(dict,k) or super.static[k] end })
-  else
-    setmetatable(aClass.static, { __index = function(_,k) return rawget(dict,k) end })
-  end
-
-  setmetatable(aClass, { __index = aClass.static, __tostring = _tostring,
-                         __call = _call, __newindex = _declareInstanceMethod })
-
-  return aClass
+local function class(attr)
+	attr = attr or {}
+	return Class:extend(attr)
 end
 
-local function _includeMixin(aClass, mixin)
-  assert(type(mixin) == 'table', "mixin must be a table")
-
-  for name,method in pairs(mixin) do
-    if name ~= "included" and name ~= "static" then aClass[name] = method end
-  end
-
-  for name,method in pairs(mixin.static or {}) do
-    aClass.static[name] = method
-  end
-
-  if type(mixin.included)=="function" then mixin:included(aClass) end
-  return aClass
-end
-
-local DefaultMixin = {
-  __tostring   = function(self) return "instance of " .. tostring(self.class) end,
-
-  initialize   = function(self, ...) end,
-
-  isInstanceOf = function(self, aClass)
-    return type(aClass) == 'table' and (aClass == self.class or self.class:isSubclassOf(aClass))
-  end,
-
-  static = {
-    allocate = function(self)
-      assert(type(self) == 'table', "Make sure that you are using 'Class:allocate' instead of 'Class.allocate'")
-      return setmetatable({ class = self }, self.__instanceDict)
-    end,
-
-    new = function(self, ...)
-      assert(type(self) == 'table', "Make sure that you are using 'Class:new' instead of 'Class.new'")
-      local instance = self:allocate()
-      instance:initialize(...)
-      return instance
-    end,
-
-    subclass = function(self, name)
-      assert(type(self) == 'table', "Make sure that you are using 'Class:subclass' instead of 'Class.subclass'")
-      assert(type(name) == "string", "You must provide a name(string) for your class")
-
-      local subclass = _createClass(name, self)
-
-      for methodName, f in pairs(self.__instanceDict) do
-        _propagateInstanceMethod(subclass, methodName, f)
-      end
-      subclass.initialize = function(instance, ...) return self.initialize(instance, ...) end
-
-      self.subclasses[subclass] = true
-      self:subclassed(subclass)
-
-      return subclass
-    end,
-
-    subclassed = function(self, other) end,
-
-    isSubclassOf = function(self, other)
-      return type(other)      == 'table' and
-             type(self.super) == 'table' and
-             ( self.super == other or self.super:isSubclassOf(other) )
-    end,
-
-    include = function(self, ...)
-      assert(type(self) == 'table', "Make sure you that you are using 'Class:include' instead of 'Class.include'")
-      for _,mixin in ipairs({...}) do _includeMixin(self, mixin) end
-      return self
-    end
-  }
-}
-
-function middleclass.class(name, super)
-  assert(type(name) == 'string', "A name (string) is needed for the new class")
-  return super and super:subclass(name) or _includeMixin(_createClass(name), DefaultMixin)
-end
-
-setmetatable(middleclass, { __call = function(_, ...) return middleclass.class(...) end })
-
-return middleclass
+return class
