@@ -48,13 +48,10 @@ end
 
 function Builder:addGroup(name, groupTable)
     groupTable = groupTable or {}
-    local initGroup = function() end
-    if groupTable.init then
-        initGroup = groupTable.init
-    end
+    local initGroup = groupTable.init or function() end
     lume.push(self.funcs, function(scene)
         buildGroup(scene:createGroup(name, {z=groupTable.z}), groupTable)
-        initGroup(scene:group(name))
+        initGroup(scene:group(name), scene)
     end)
 end
 
@@ -84,7 +81,7 @@ end
 
 local _onObjectCollision = function(a, b, resolve, collider)
     return function(scene)
-        if collider(a, b) then resolve(scene, a, b) end
+        if collider(a, b) then resolve(a, b, scene) end
     end
 end
 
