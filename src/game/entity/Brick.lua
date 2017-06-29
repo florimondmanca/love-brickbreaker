@@ -34,10 +34,10 @@ end
 
 function Brick:draw()
     love.graphics.push()
-    love.graphics.translate(self.x, self.y)
+    love.graphics.translate(self.x + self.width/2, self.y + self.height/2)
     love.graphics.scale(self.scale)
     love.graphics.setColor(unpack(self.color))
-    love.graphics.rectangle('fill', 0, 0, self.width, self.height)
+    love.graphics.rectangle('fill', -self.width/2, -self.height/2, self.width, self.height)
     love.graphics.pop()
 end
 

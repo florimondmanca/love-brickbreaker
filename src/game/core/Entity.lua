@@ -10,6 +10,7 @@ function Entity:init(t)
 end
 
 function Entity:kill()
+    self.dead = true
     for _, group in ipairs(self.groups) do
         group:remove(self)
     end

@@ -81,7 +81,9 @@ end
 
 local _onObjectCollision = function(a, b, resolve, collider)
     return function(scene)
-        if collider(a, b) then resolve(a, b, scene) end
+        if not a.dead and not b.dead and collider(a, b) then
+            resolve(a, b, scene)
+        end
     end
 end
 

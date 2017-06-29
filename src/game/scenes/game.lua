@@ -2,6 +2,7 @@ local lume = require 'lib.lume'
 local collisions = require 'core.collisions'
 local Brick = require 'entity.Brick'
 local Ball = require 'entity.Ball'
+local Border = require 'entity.Border'
 local SceneBuilder = require 'core.SceneBuilder'
 
 local w, h = love.graphics.getDimensions()
@@ -32,6 +33,18 @@ local function makegrid(t)
 end
 
 local S = SceneBuilder()
+
+S:addGroup('borders', {init = function(group)
+    group:add(Border{
+        x = 0, y = 0, width = w, height = 10, color = {255, 255, 255}
+    })
+    group:add(Border{
+        x = w - 10, y = 10, width = 10, height = h-10, color = {255, 255, 255}
+    })
+    group:add(Border{
+        x = 0, y = 10, width = 10, height = h-10, color = {255, 255, 255}
+    })
+end})
 
 S:addGroup('bricks', {init = function(group)
     for _, brick in makegrid{
@@ -64,25 +77,31 @@ S:addGroup('balls', {init = function(group, scene)
     group:add(Ball{
         x = scene.objects.player.x,
         y = scene.objects.player.y - 20,
-        speed = 100,
+        speed = 300,
         angle = -math.pi/2 + math.pi/4 * lume.random(-.2, .2),
         radius = 6,
         color = {255, 255, 100}
     })
 end})
 
-S:setDefaultCollider(collisions.circleToCircle)
+
+----------------
+-- Collisions --
+----------------
 
 S:onCollisionBetween{
     groupA = 'bricks',
     groupB = 'balls',
-    resolve = function(brick, ball)
+    resolve = function(brick, ball, scene)
         local res = collisions.resolveRectangleToMovingCircle(brick, ball)
         ball.x = res.x
         ball.y = res.y
         ball.vx = res.vx
         ball.vy = res.vy
-        brick:kill()
+        brick.dead = true
+        scene.objects.timer:tween(1, brick, {scale=0}, 'out-in-quad', function()
+            brick:kill()
+        end)
     end,
     collider = collisions.rectangleToCircle,
 }
@@ -98,28 +117,17 @@ S:onCollisionBetween{
     collider = collisions.rectangleToCircle,
 }
 
-S:addObject{
-    script = 'core.KeyTrigger',
-    arguments = {
-        key = 'down',
-        action = function()
-            for _, ball in S.scene:group('balls'):each() do
-                ball.speed = ball.speed - 20
-            end
-        end
-    }
-}
-
-S:addObject{
-    script = 'core.KeyTrigger',
-    arguments = {
-        key = 'up',
-        action = function()
-            for _, ball in S.scene:group('balls'):each() do
-                ball.speed = ball.speed + 20
-            end
-        end
-    }
+S:onCollisionBetween{
+    groupA = 'borders',
+    groupB = 'balls',
+    resolve = function(border, ball)
+        local res = collisions.resolveRectangleToMovingCircle(border, ball)
+        ball.x = res.x
+        ball.y = res.y
+        ball.vx = res.vx
+        ball.vy = res.vy
+    end,
+    collider = collisions.rectangleToCircle,
 }
 
 S:addCallback('enter', function()

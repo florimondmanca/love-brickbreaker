@@ -88,7 +88,7 @@ function collisions.resolveRectangleToMovingCircle(rect, cir)
     local vx, vy = cir.vx, cir.vy
 
     if (vx > 0 and res.x < rect.x)
-    or (vx < 0 and res.x > rect.x + rect.height) then
+    or (vx < 0 and res.x > rect.x + rect.width) then
         vx = -vx
     end
 
