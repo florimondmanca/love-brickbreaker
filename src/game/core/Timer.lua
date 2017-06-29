@@ -26,14 +26,15 @@ function Action:trigger() self:call() self.elapsed = 0 end
 
 
 local Timer = class()
-Timer.tweens = {}
-Timer.tweens['linear'] = easing.linear
-Timer.tweens['in-quad'] = easing.inQuad
-Timer.tweens['out-quad'] = easing.outQuad
-Timer.tweens['in-out-quad'] = easing.inOutQuad
-Timer.tweens['out-in-quad'] = easing.outInQuad
-Timer.tweens['in-exp'] = easing.inExp
-Timer.tweens['out-exp'] = easing.outExp
+Timer.tweens = {
+    ['linear'] = easing.linear,
+    ['in-quad'] = easing.inQuad,
+    ['out-quad'] = easing.outQuad,
+    ['in-out-quad'] = easing.inOutQuad,
+    ['out-in-quad'] = easing.outInQuad,
+    ['in-exp'] = easing.inExp,
+    ['out-exp'] = easing.outExp,
+}
 
 function Timer:init()
     self.actions = {}

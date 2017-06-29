@@ -42,17 +42,25 @@ function Player:init(t)
     self.width = t.width
     self.height = t.height
     self.color = t.color
+    self.scaleX = t.scaleX or 1
+    self.scaleY = t.scaleY or 1
     self.controls = t.controls or self.controls.name
 end
 
 function Player:update()
+    local prevX = self.x
     self.controls.control(self)
     self.x = lume.clamp(self.x, self.minx, self.maxx - self.width)
+    self.scaleY = lume.lerp(1, 0.5, math.abs(self.x - prevX) / 50)
 end
 
 function Player:draw()
     love.graphics.setColor(self.color)
-    love.graphics.rectangle('fill', self.x, self.y, self.width, self.height)
+    love.graphics.push()
+    love.graphics.translate(self.x + self.width/2, self.y + self.height/2)
+    love.graphics.scale(self.scaleX, self.scaleY)
+    love.graphics.rectangle('fill', -self.width/2, -self.height/2, self.width, self.height)
+    love.graphics.pop()
 end
 
 return Player

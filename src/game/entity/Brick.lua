@@ -22,7 +22,9 @@ function Brick:init(t)
     self.y = t.y
     self.width = t.width
     self.height = t.height
-    self.color = t.color
+    self.rotation = 0
+    self.color = lume.first(t.color, 3)
+    self.opacity = self.color[4] or 255
     self:set{
         scale = {
             value = t.scale or 1,
@@ -36,7 +38,8 @@ function Brick:draw()
     love.graphics.push()
     love.graphics.translate(self.x + self.width/2, self.y + self.height/2)
     love.graphics.scale(self.scale)
-    love.graphics.setColor(unpack(self.color))
+    love.graphics.rotate(self.rotation)
+    love.graphics.setColor(self.color[1], self.color[2], self.color[3], self.opacity)
     love.graphics.rectangle('fill', -self.width/2, -self.height/2, self.width, self.height)
     love.graphics.pop()
 end

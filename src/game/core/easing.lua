@@ -1,3 +1,9 @@
+local sin = math.sin
+local asin = math.asin
+local pow = math.pow
+local pi = math.pi
+local abs = math.abs
+
 local easing = {}
 
 --[[
@@ -11,6 +17,11 @@ In the following:
 function easing.linear(t, b, c, d)
     return b + c * t/d
 end
+
+
+----------
+-- Quad --
+----------
 
 function easing.inQuad(t, b, c, d)
     return b + c * (t/d)^2
@@ -32,20 +43,26 @@ end
 
 function easing.outInQuad(t, b, c, d)
     if t < d / 2 then
-        return easing.outQuad (t * 2, b, c / 2, d)
+        return easing.outQuad(t * 2, b, c / 2, d)
     else
         return easing.inQuad((t * 2) - d, b + c / 2, c / 2, d)
     end
 end
 
+
+-----------------
+-- Exponential --
+-----------------
+
 function easing.inExp(t, b, c, d)
     if t == 0 then return b
-    else return  c * math.pow(2, 10 * (t / d - 1)) + b - c * 0.001 end
+    else return  c * pow(2, 10 * (t / d - 1)) + b - c * 0.001 end
 end
 
 function easing.outExp(t, b, c, d)
     if t == d then return b + c
-    else return c * 1.001 * (-math.pow(2, -10 * t / d) + 1) + b end
+    else return c * 1.001 * (-pow(2, -10 * t / d) + 1) + b end
 end
+
 
 return easing

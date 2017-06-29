@@ -1,3 +1,4 @@
+-- local gamestate = require 'lib.gamestate'
 local lume = require 'lib.lume'
 local collisions = require 'core.collisions'
 local Brick = require 'entity.Brick'
@@ -44,6 +45,9 @@ S:addGroup('borders', {init = function(group)
     group:add(Border{
         x = 0, y = 10, width = 10, height = h-10, color = {255, 255, 255}
     })
+    group:add(Border{
+        x = 10, y = h - 10, width = w-20, height = 10, color = {255, 255, 255}
+    })
 end})
 
 S:addGroup('bricks', {init = function(group)
@@ -67,7 +71,7 @@ S:addObjectAs('player', {
         y = h - 50,
         minx = 10, maxx = w - 10,
         width = 100,
-        height = 20,
+        height = 15,
         color = {255, 255, 255, 255},
         controls = 'mouse',
     }
@@ -99,8 +103,11 @@ S:onCollisionBetween{
         ball.vx = res.vx
         ball.vy = res.vy
         brick.dead = true
-        scene.objects.timer:tween(1, brick, {scale=0}, 'out-in-quad', function()
-            brick:kill()
+        scene.objects.timer:tween(.3, brick, {opacity=0}, 'in-quad')
+        scene.objects.timer:tween(.1, brick, {scale=1.2}, 'out-quad',
+        function()
+            scene.objects.timer:tween(.2, brick, {scale=0}, 'in-quad',
+            function() brick:kill() end)
         end)
     end,
     collider = collisions.rectangleToCircle,
@@ -109,10 +116,15 @@ S:onCollisionBetween{
 S:onCollisionBetween{
     object = 'player',
     group = 'balls',
-    resolve = function(player, ball)
+    resolve = function(player, ball, scene)
         local res = collisions.resolveRectangleToMovingCircle(player, ball)
         ball.x = res.x
         ball.vy = res.vy
+        -- make the player bar squish :juice:
+        scene.objects.timer:tween(.08, player, {scaleX = 1.2}, 'out-quad',
+        function()
+            scene.objects.timer:tween(.14, player, {scaleX = 1}, 'out-quad')
+        end)
     end,
     collider = collisions.rectangleToCircle,
 }
@@ -129,6 +141,12 @@ S:onCollisionBetween{
     end,
     collider = collisions.rectangleToCircle,
 }
+
+S:addUpdateAction(function(scene)
+    for _, ball in scene:group('balls'):each() do
+        if ball.y > h then ball:kill() end
+    end
+end)
 
 S:addCallback('enter', function()
     love.graphics.setBackgroundColor(255, 100, 150, 255)
