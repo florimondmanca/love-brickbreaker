@@ -132,11 +132,17 @@ S:onCollisionBetween{
         local res = collisions.resolveRectangleToMovingCircle(player, ball)
         ball.x = res.x
         ball.vy = res.vy
-        -- make the player bar squish :juice:
-        scene.objects.timer:tween(.08, player, {scaleX = 1.2}, 'out-quad',
+        -- juicy player bar!
+        scene.objects.timer:tween(.08, player, {scaleX = 1.2}, 'in-quad',
         function()
             scene.objects.timer:tween(.14, player, {scaleX = 1}, 'out-quad')
         end)
+        local y = player.y
+        scene.objects.timer:tween(.06, player, {y = y + 5}, 'in-quad',
+        function()
+            scene.objects.timer:tween(.1, player, {y=y}, 'in-out-quad')
+        end
+        )
     end,
     collider = collisions.rectangleToCircle,
 }
@@ -164,8 +170,16 @@ S:addUpdateAction(function(scene)
     end
 end)
 
-S:addCallback('enter', function()
+S:addCallback('enter', function(scene)
     love.graphics.setBackgroundColor(unpack(COLORS.background))
+
+    for _, brick in scene:group('bricks'):each() do
+        local y = brick.y
+        brick.y = y - h
+        scene.objects.timer:tween(lume.random(.4, .8), brick, {y = y}, 'out-quad', function()
+            brick.y = y
+        end)
+    end
 end)
 
 return S
