@@ -65,4 +65,41 @@ function easing.outExp(t, b, c, d)
 end
 
 
+----------
+-- Back --
+----------
+
+function easing.inBack(t, b, c, d, s)
+    if not s then s = 1.70158 end
+    t = t / d
+    return c * t * t * ((s + 1) * t - s) + b
+end
+
+function easing.outBack(t, b, c, d, s)
+    if not s then s = 1.70158 end
+    t = t / d - 1
+    return c * (t * t * ((s + 1) * t + s) + 1) + b
+end
+
+function easing.inOutBack(t, b, c, d, s)
+    if not s then s = 1.70158 end
+    s = s * 1.525
+    t = t / d * 2
+    if t < 1 then
+        return c / 2 * (t * t * ((s + 1) * t - s)) + b
+    else
+        t = t - 2
+        return c / 2 * (t * t * ((s + 1) * t + s) + 2) + b
+    end
+end
+
+function easing.outInBack(t, b, c, d, s)
+    if t < d / 2 then
+        return outBack(t * 2, b, c / 2, d, s)
+    else
+        return inBack((t * 2) - d, b + c / 2, c / 2, d, s)
+    end
+end
+
+
 return easing

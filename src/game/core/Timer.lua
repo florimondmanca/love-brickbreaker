@@ -34,6 +34,10 @@ Timer.tweens = {
     ['out-in-quad'] = easing.outInQuad,
     ['in-exp'] = easing.inExp,
     ['out-exp'] = easing.outExp,
+    ['in-back'] = easing.inBack,
+    ['out-back'] = easing.outBack,
+    ['in-out-back'] = easing.inOutBack,
+    ['out-in-back'] = easing.outInBack,
 }
 
 function Timer:init()
