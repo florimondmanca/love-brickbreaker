@@ -50,24 +50,4 @@ end
 
 function Camera:unset() love.graphics.pop() end
 
-function Camera:shake(timer, amount, damp)
-    amount = amount and lume.clamp(amount, 0, 1) or 0
-    damp = damp and lume.clamp(damp, 0, 1) or .3
-
-    local cx, cy = self.x, self.y
-    local rad = lume.lerp(0, 10, amount)
-    local angle = lume.random(2*math.pi)
-
-    local duration = .5
-    -- smoothly bring the Camera to the center position
-    timer:tween(duration, self, {x = cx, y = cy}, 'in-out-quad')
-    -- move it randomly for the same amount of time
-    timer:during(duration,
-    function()
-        self:move(lume.vector(angle, rad))
-        rad = rad * (1 - damp)
-        angle = angle + math.pi + math.pi/3 * lume.randomchoice{1, -1}
-    end)
-end
-
 return Camera

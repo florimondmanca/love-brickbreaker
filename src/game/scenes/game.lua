@@ -59,7 +59,6 @@ local function makeBall(x, y)
     }
 end
 
-
 --- creates a ball attached to an object
 -- ball's :update() method is temporarily overridden and is restored
 -- when its :detach() method is called
@@ -91,6 +90,20 @@ local function newPlayerAttachedBall(scene)
     ))
 end
 
+local function shakeScreen(scene, duration, amplitude)
+    duration = duration or .4
+    amplitude = amplitude or 5
+    local radius = {value = 0}
+    local angle = 0
+    scene.objects.timer:tween(.2*duration, radius, {value = amplitude}, 'in-quad', function()
+        scene.objects.timer:tween(.8*duration, radius, {value = 0}, 'out-quad')
+    end)
+    scene.objects.timer:during(duration, function()
+        angle = angle + lume.random(-math.pi, math.pi) * .2
+        scene.camera:setPosition(lume.vector(angle, radius.value))
+    end, function() scene.camera:setPosition(0, 0) end)
+end
+
 
 --------------------
 -- Scene building --
@@ -102,15 +115,15 @@ S:addGroup('borders', {init = function(group)
     local c = COLORS.borders
     -- top
     group:add(Border{
-        x = 0, y = 0, width = w, height = 10, color = c
+        x = -10, y = -10, width = w + 20, height = 20, color = c
     })
     -- right
     group:add(Border{
-        x = w - 10, y = 10, width = 10, height = h-10, color = c
+        x = w - 10, y = 0, width = 20, height = h, color = c
     })
     -- left
     group:add(Border{
-        x = 0, y = 10, width = 10, height = h-10, color = c
+        x = -10, y = 0, width = 20, height = h, color = c
     })
     -- -- bottom
     -- group:add(Border{
@@ -162,10 +175,11 @@ S:onCollisionBetween{
         ball.vy = res.vy
         brick.dead = true
         -- opacity fades to 0, brick rotates a bit
-        scene.objects.timer:tween(.3, brick, {opacity=0, rotation=lume.random(-.1, .1)*math.pi}, 'in-quad')
+        local d = .3
         -- brick scale fades to 0
-        scene.objects.timer:tween(.3, brick, {scale=0}, 'in-back',
+        scene.objects.timer:tween(d, brick, {scale=0}, 'in-back',
         function() brick:kill() end)
+        shakeScreen(scene)
     end,
     collider = collisions.rectangleToCircle,
 }
@@ -176,6 +190,7 @@ S:onCollisionBetween{
     resolve = function(player, ball, scene)
         local res = collisions.resolveRectangleToMovingCircle(player, ball)
         ball.x = res.x
+        -- bounce according to position on paddle
         ball.angle = -math.pi * (1 - (ball.x - (player.x-10))/(player.width+20))
 
         -- juicy player bar!
@@ -206,6 +221,7 @@ S:onCollisionBetween{
         function()
             scene.objects.timer:tween(.14, border, {scale = 1}, 'out-quad')
         end)
+        shakeScreen(scene)
     end,
     collider = collisions.rectangleToCircle,
 }
