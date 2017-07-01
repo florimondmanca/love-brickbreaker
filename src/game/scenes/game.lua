@@ -1,7 +1,6 @@
 -- local gamestate = require 'lib.gamestate'
 local lume = require 'lib.lume'
 local collisions = require 'core.collisions'
-local Brick = require 'entity.Brick'
 local Ball = require 'entity.Ball'
 local Border = require 'entity.Border'
 local SceneBuilder = require 'core.SceneBuilder'
@@ -22,37 +21,11 @@ local COLORS = {
     ballParticles = {lume.color('#F2EFEA', 255)},
 }
 
-local function makegrid(t)
-    assert(type(t.width) == 'number', 'grid() requires number width')
-    assert(type(t.height) == 'number', 'grid() requires number height')
-    assert(type(t.nx) == 'number', 'grid() requires number nx')
-    assert(type(t.ny) == 'number', 'grid() requires number ny')
-    t.padw = t.padw or t.pad or 0
-    t.padh = t.padh or t.padw or 0
-    t.marginw = t.marginw or t.margin or 0
-    t.marginh = t.marginh or t.marginw
-    local brickw = (t.width - 2*t.marginw) / t.nx - t.padw
-    local brickh = (t.height - 2*t.marginh) / t.ny - t.padh
-    local g = {}
-    for i = 1, t.nx do
-        for j = 1, t.ny do
-            lume.push(g, {
-                x = t.marginw + (i-1) * (brickw + t.padw),
-                y = t.marginh + (j-1) * (brickh + t.padh),
-                width = brickw,
-                height = brickh,
-            })
-        end
-    end
-    return next, g
-end
-
 local function makeBall(x, y)
     return Ball{
-        x = x,
-        y = y,
+        x = x, y = y,
         radius = 6,
-        speed = 300,
+        speed = 500,
         angle = -math.pi/2 + math.pi/4 * lume.random(-1, 1),
         color = COLORS.ball,
         particleColor = COLORS.ballParticles,
@@ -112,37 +85,30 @@ end
 local S = SceneBuilder()
 
 S:addGroup('borders', {init = function(group)
-    local c = COLORS.borders
     -- top
     group:add(Border{
-        x = -10, y = -10, width = w + 20, height = 20, color = c
+        x = -10, y = -10, width = w + 20, height = 10
     })
     -- right
     group:add(Border{
-        x = w - 10, y = 0, width = 20, height = h, color = c
+        x = w, y = 0, width = 10, height = h
     })
     -- left
     group:add(Border{
-        x = -10, y = 0, width = 20, height = h, color = c
+        x = -10, y = 0, width = 10, height = h
     })
-    -- -- bottom
-    -- group:add(Border{
-    --     x = 10, y = h - 10, width = w-20, height = 10, color = c
-    -- })
 end})
 
 S:addGroup('bricks', {init = function(group)
-    for _, brick in makegrid{
-        width=w, height=.6*h,
-        nx=10, ny=10,
-        pad=15, margin=30,
-    } do
-        group:add(Brick{
-            x = brick.x, y = brick.y,
-            width = brick.width, height = brick.height,
-            color = COLORS.bricks,
-        })
-    end
+    local level = require('entity.LevelBuilder').fromTable{
+        area = {width = w, height = h/2},
+        gridSize = {x = 24, y = 18},
+        brickColor = {lume.color('#DBB36D', 255)},
+        bricks = {
+            {type = 'range', arguments = {fromX=9, toX=22, fromY=4, toY=12}},
+        },
+    }
+    for _, brick in ipairs(level.bricks) do group:add(brick) end
 end})
 
 S:addObjectAs('player', {
@@ -150,7 +116,7 @@ S:addObjectAs('player', {
     arguments = {
         x = w/2,
         y = h - 50,
-        minx = 10, maxx = w - 10,
+        minx = 0, maxx = w,
         width = 100,
         height = 15,
         color = COLORS.player,
@@ -191,7 +157,7 @@ S:onCollisionBetween{
         local res = collisions.resolveRectangleToMovingCircle(player, ball)
         ball.x = res.x
         -- bounce according to position on paddle
-        ball.angle = -math.pi * (1 - (ball.x - (player.x-10))/(player.width+20))
+        ball.angle = -math.pi * (1 - (ball.x - (player.x-20))/(player.width+40))
 
         -- juicy player bar!
         scene.objects.timer:tween(.08, player, {scaleX = 1.2}, 'in-quad',
@@ -217,10 +183,6 @@ S:onCollisionBetween{
         ball.y = res.y
         ball.vx = res.vx
         ball.vy = res.vy
-        scene.objects.timer:tween(.1, border, {scale = 1.5}, 'out-back',
-        function()
-            scene.objects.timer:tween(.14, border, {scale = 1}, 'out-quad')
-        end)
         shakeScreen(scene)
     end,
     collider = collisions.rectangleToCircle,
